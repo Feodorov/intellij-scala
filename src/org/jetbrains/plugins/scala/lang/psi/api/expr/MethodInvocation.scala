@@ -14,8 +14,12 @@ import org.jetbrains.plugins.scala.lang.psi.impl.ScalaPsiManager
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScTrait
 import com.intellij.openapi.util.Key
 import org.jetbrains.plugins.scala.lang.languageLevel.ScalaLanguageLevel
-import org.jetbrains.plugins.scala.lang.resolve.ResolvableReferenceExpression
+import org.jetbrains.plugins.scala.lang.resolve.{ScalaResolveResult, ResolvableReferenceExpression}
 import scala.collection
+import org.jetbrains.plugins.scala.lang.psi.impl.toplevel.typedef.ScObjectImpl
+import org.jetbrains.plugins.scala.lang.psi.api.toplevel.templates.ScExtendsBlock
+import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScMacroDefinition, ScFunction}
+import org.jetbrains.plugins.scala.lang.psi.light.ScFunctionWrapper
 
 /**
  * Pavel Fatin, Alexander Podkhalyuzin.
@@ -146,7 +150,34 @@ trait MethodInvocation extends ScExpression with ScalaPsiElement {
       case _: ScPostfixExpr => return nonValueType //no arg exprs, just reference expression type
       case _ =>
     }
+    nonValueType match {
+      case Success(func, Some(refExpr)) =>
+        refExpr match {
+          case expr: ScReferenceExpression =>
+            val possibleMacro = expr.getSimpleVariants(implicits = true, filterNotNamedVariants = false).filter{case srr: ScalaResolveResult => srr.name == expr.getText}
+            if (possibleMacro.nonEmpty && possibleMacro.size == 1) {
+              possibleMacro(0).getElement match {
+                case o: ScObjectImpl =>
+                  o.getMethods.foreach {
+                    case f: ScFunctionWrapper =>
+                      f.function match {
+                        case m: ScMacroDefinition =>
+                          m.containingClass.name match {
+                            case "MyIntMacro"  =>
+                              return Success(Int, Some(this))
+                          }
+                        case _ =>
+                    }
+                    case _ =>
+                }
+                case _ =>
+              }
+            }
+          case _ =>
+        }
 
+      case _ =>
+    }
     val withExpectedType = useExpectedType && expectedType() != None //optimization to avoid except
 
     if (useExpectedType) nonValueType = updateAccordingToExpectedType(nonValueType, check = true)
