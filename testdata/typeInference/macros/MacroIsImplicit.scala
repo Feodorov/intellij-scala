@@ -13,7 +13,7 @@ object MacroIsImplicit {
 object Test extends App {
   import scala.language.implicitConversions
   implicit def foo(x: String): Any = macro MacroIsImplicit.foo
-  val z: Any = "2"
+  val z: Int = "2"
   /*start*/z/*end*/
 }
 //Int

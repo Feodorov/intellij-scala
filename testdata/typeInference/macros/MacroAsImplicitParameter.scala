@@ -12,7 +12,7 @@ object MacroAsImplicitParameter {
 
 object Test extends App {
   implicit def foo: AnyVal = macro MacroAsImplicitParameter.foo
-  def bar(implicit x: AnyVal) = x
+  def bar(implicit x: AnyVal): x.type = x
   /*start*/bar/*end*/
 }
 //Int
