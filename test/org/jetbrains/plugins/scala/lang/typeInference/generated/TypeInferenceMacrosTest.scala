@@ -39,6 +39,6 @@ class TypeInferenceMacrosTest extends TypeInferenceTestBase {
     doTest()
   }
 
-  //  def testImplicitParameter() {doTest()}
-  //  def testMacroAsImplicitParameter() {doTest()}
+    def testImplicitParametersForMethodDependentTypes() {doTest()}
+//    def testImplicitParameter() {doTest()}
 }
