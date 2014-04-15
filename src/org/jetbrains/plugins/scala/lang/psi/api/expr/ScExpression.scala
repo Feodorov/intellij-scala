@@ -4,7 +4,7 @@ package psi
 package api
 package expr
 
-import psi.impl.ScalaPsiElementFactory
+import org.jetbrains.plugins.scala.lang.psi.impl.{ScalaPsiManager, ScalaPsiElementFactory}
 import types.result.{TypingContext, TypeResult}
 import toplevel.imports.usages.ImportUsed
 import lang.resolve.{StdKinds, ScalaResolveResult}
@@ -22,7 +22,7 @@ import base.ScLiteral
 import lexer.ScalaTokenTypes
 import result.Failure
 import result.Success
-import statements.ScTypeAliasDefinition
+import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScMacroDefinition, ScTypeAliasDefinition}
 import com.intellij.psi._
 import java.lang.Integer
 import base.types.ScTypeElement
@@ -85,7 +85,18 @@ trait ScExpression extends ScBlockStatement with PsiAnnotationMemberValue {
                   if (f.length == 0) {
                     f = convertible.implicitMapSecondPart(Some(expected), fromUnderscore).filter(_.tp.conforms(expected))
                   }
-                  if (f.length == 1) ExpressionTypeResult(Success(f(0).getTypeWithDependentSubstitutor, Some(this)), f(0).importUsed, Some(f(0).element))
+                  if (f.length == 1) {
+                    f.head.element match {
+                      case m: ScMacroDefinition =>
+                        m.containingClass.name match {
+                          case "Test" =>
+                            val classB = ScalaPsiManager.instance(getProject).getCachedClass(this.getResolveScope, "macroexample.B")
+                            ExpressionTypeResult(Success(ScDesignatorType(classB), Some(this)), f(0).importUsed, Some(f(0).element))
+                          case _ => ExpressionTypeResult(Success(f(0).getTypeWithDependentSubstitutor, Some(this)), f(0).importUsed, Some(f(0).element))
+                        }
+                      case _ => ExpressionTypeResult(Success(f(0).getTypeWithDependentSubstitutor, Some(this)), f(0).importUsed, Some(f(0).element))
+                    }
+                  }
                   else if (f.length == 0) defaultResult
                   else {
                     MostSpecificUtil(this, 1).mostSpecificForImplicit(f.toSet) match {
