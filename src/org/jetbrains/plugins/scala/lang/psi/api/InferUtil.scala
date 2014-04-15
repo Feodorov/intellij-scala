@@ -8,7 +8,7 @@ import org.jetbrains.plugins.scala.lang.psi.types.Compatibility.Expression
 import org.jetbrains.plugins.scala.lang.resolve.ScalaResolveResult
 import org.jetbrains.plugins.scala.lang.psi.implicits.ImplicitParametersCollector
 import statements.params.ScParameter
-import statements.ScFunction
+import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScMacroDefinition, ScFunction}
 import org.jetbrains.plugins.scala.lang.psi.ScalaPsiUtil.SafeCheckException
 import org.jetbrains.plugins.scala.lang.psi.{types, ScalaPsiUtil}
 import org.jetbrains.plugins.scala.lang.psi.types.result.{Success, TypeResult, TypingContext}
@@ -17,7 +17,7 @@ import nonvalue.{Parameter, ScMethodType, ScTypePolymorphicType}
 import toplevel.typedef.ScObject
 import com.intellij.psi.PsiElement
 import org.jetbrains.plugins.scala.extensions.toPsiClassExt
-import org.jetbrains.plugins.scala.lang.psi.impl.ScalaPsiElementFactory
+import org.jetbrains.plugins.scala.lang.psi.impl.{ScalaPsiManager, ScalaPsiElementFactory}
 import org.jetbrains.plugins.scala.lang.languageLevel.ScalaLanguageLevel
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement
 import com.intellij.openapi.diagnostic.Logger
@@ -154,6 +154,10 @@ object InferUtil {
             exprs += new Expression(polymorphicSubst subst subst.subst(param.getType(TypingContext.empty).get))
           case ScalaResolveResult(patt: ScBindingPattern, subst) => {
             exprs += new Expression(polymorphicSubst subst subst.subst(patt.getType(TypingContext.empty).get))
+          }
+          case ScalaResolveResult(m: ScMacroDefinition, subst) if m.containingClass.name == "Test" => {
+            val classB = ScalaPsiManager.instance(m.getProject).getCachedClass(m.getResolveScope, "macroexample.B")
+            exprs += new Expression(polymorphicSubst subst ScDesignatorType(classB))
           }
           case ScalaResolveResult(fun: ScFunction, subst) => {
             val funType = {
