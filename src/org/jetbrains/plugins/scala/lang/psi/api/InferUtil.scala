@@ -15,7 +15,7 @@ import org.jetbrains.plugins.scala.lang.psi.types.result.{Success, TypeResult, T
 import org.jetbrains.plugins.scala.lang.psi.types._
 import nonvalue.{Parameter, ScMethodType, ScTypePolymorphicType}
 import toplevel.typedef.ScObject
-import com.intellij.psi.PsiElement
+import com.intellij.psi.{PsiClass, PsiNamedElement, PsiElement}
 import org.jetbrains.plugins.scala.extensions.toPsiClassExt
 import org.jetbrains.plugins.scala.lang.psi.impl.{ScalaPsiManager, ScalaPsiElementFactory}
 import org.jetbrains.plugins.scala.lang.languageLevel.ScalaLanguageLevel
@@ -158,6 +158,14 @@ object InferUtil {
           case ScalaResolveResult(m: ScMacroDefinition, subst) if m.containingClass.name == "Test" => {
             val classB = ScalaPsiManager.instance(m.getProject).getCachedClass(m.getResolveScope, "macroexample.B")
             exprs += new Expression(polymorphicSubst subst ScDesignatorType(classB))
+          }
+          case ScalaResolveResult(m: ScMacroDefinition, subst) if m.containingClass.name == "TestList" => {
+            val classB = ScalaPsiManager.instance(m.getProject).getCachedClass(m.getResolveScope, "macroexample.B")
+            val listClass: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "scala.collection.immutable.List").filter(!_.isInstanceOf[ScObject])
+            if (listClass.length != 0) {
+              val listOfB = ScParameterizedType(ScType.designator(listClass(0)), Seq(ScDesignatorType(classB)))
+              exprs += new Expression(polymorphicSubst subst listOfB)
+            }
           }
           case ScalaResolveResult(fun: ScFunction, subst) => {
             val funType = {
