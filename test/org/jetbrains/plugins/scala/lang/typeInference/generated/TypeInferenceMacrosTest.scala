@@ -18,8 +18,8 @@ class TypeInferenceMacrosTest extends TypeInferenceTestBase {
   def testSimple6() {doTest()}
 
   def testImplicitMethodCallWithMacroImpl() {doTest()}
-
+  def testImplicitConversionsForMethodDependentTypes() {doTest()}
   def testImplicitParametersForMethodDependentTypes() {doTest()}
+  def testImplicitConversionsForGenerics() {doTest()}
   def testImplicitParametersForGenerics() {doTest()}
-//    def testImplicitParameter() {doTest()}
 }
