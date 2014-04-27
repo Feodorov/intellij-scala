@@ -227,15 +227,7 @@ class ScImplicitlyConvertible(place: PsiElement, placeType: Boolean => Option[Sc
       
       val subst = r.substitutor
       val (tp: ScType, retTp: ScType) = r.element match {
-        case m: ScMacroDefinition =>
-          val params = m.paramClauses.clauses.apply(0).parameters
-          val tp = subst.subst(params.apply(0).getType(TypingContext.empty).getOrNothing)
-          val classB = ScalaPsiManager.instance(m.getProject).getCachedClass(m.getResolveScope, "macroexample.B")
-          val listClass: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "scala.collection.immutable.List").filter(!_.isInstanceOf[ScObject])
-          if (listClass.length != 0) {
-            val listOfB = ScParameterizedType(ScType.designator(listClass(0)), Seq(ScDesignatorType(classB)))
-            (tp, listOfB)
-          } else (tp, subst.subst(m.returnType.getOrNothing))
+        case m: ScMacroDefinition => InferUtil.processMacroImplicit(m, subst)
         case f: ScFunction if f.paramClauses.clauses.length > 0 =>
           val params = f.paramClauses.clauses.apply(0).parameters
           (subst.subst(params.apply(0).getType(TypingContext.empty).getOrNothing),

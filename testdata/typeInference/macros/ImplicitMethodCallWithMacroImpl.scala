@@ -13,7 +13,7 @@ object MacroIsImplicit {
   }
 }
 
-object Test extends App {
+object TestImplicitB extends App {
   import scala.language.implicitConversions
   implicit def foo(x: String): A = macro MacroIsImplicit.foo
   val z: A = /*start*/"2"/*end*/

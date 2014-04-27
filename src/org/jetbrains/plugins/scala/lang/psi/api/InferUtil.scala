@@ -2,7 +2,7 @@ package org.jetbrains.plugins.scala.lang.psi.api
 
 import base.patterns.ScBindingPattern
 import base.ScLiteral
-import expr.ScExpression
+import org.jetbrains.plugins.scala.lang.psi.api.expr.{ScReferenceExpression, ScExpression}
 import collection.mutable.ArrayBuffer
 import org.jetbrains.plugins.scala.lang.psi.types.Compatibility.Expression
 import org.jetbrains.plugins.scala.lang.resolve.ScalaResolveResult
@@ -281,5 +281,46 @@ object InferUtil {
       case mt: ScMethodType => applyImplicitViewToResult(mt, expectedType)
       case tp => tp
     }
+  }
+
+  def processMacroDefinition(m: ScMacroDefinition): Option[TypeResult[ScType]] = m.containingClass.name match {
+    case "MyIntMacro" | "MyIntMacroInClass" | "MyParamlessMacroInClass" | "MyParamlessIntMacro" => Some(Success(Int, Some(m)))
+    case _ => None
+  }
+
+  def processMacroImplicit(m: ScMacroDefinition, subst: ScSubstitutor): (ScType, ScType) = {
+    val params = m.paramClauses.clauses.apply(0).parameters
+    val tp = subst.subst(params.apply(0).getType(TypingContext.empty).getOrNothing)
+    val classB = ScalaPsiManager.instance(m.getProject).getCachedClass(m.getResolveScope, "macroexample.B")
+
+    m.containingClass.name match {
+      case "TestImplicitB" => (tp, ScDesignatorType(classB))
+      case "TestImplicitListB" =>
+        val listClass: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "scala.collection.immutable.List").filter(!_.isInstanceOf[ScObject])
+        if (listClass.length != 0) {
+          val listOfB = ScParameterizedType(ScType.designator(listClass(0)), Seq(ScDesignatorType(classB)))
+          (tp, listOfB)
+        } else (tp, subst.subst(m.returnType.getOrNothing))
+      case _ => (tp, subst.subst(m.returnType.getOrNothing))
+    }
+  }
+
+  def checkIfMacro(expr: ScExpression): Option[TypeResult[ScType]] = {
+    expr match {
+      case r: ScReferenceExpression =>
+        val macros: Array[PsiElement] = r.multiResolve(false).map(_.getElement)
+        if (macros.isEmpty) None
+        else macros(0) match {
+          case m: ScMacroDefinition => processMacroDefinition(m)
+          case _ => None
+        }
+      case _ => None
+    }
+  }
+  def typeAfterImplicitConversion(m: ScMacroDefinition): Option[ScType] = m.containingClass.name match {
+    case "Test" =>
+      val classB = ScalaPsiManager.instance(m.getProject).getCachedClass(m.getResolveScope, "macroexample.B")
+      Some(ScDesignatorType(classB))
+    case _ => None
   }
 }

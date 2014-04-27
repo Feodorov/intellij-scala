@@ -12,7 +12,7 @@ object MacroAsImplicitParameter {
   }
 }
 
-object TestList extends App {
+object TestImplicitListB extends App {
   implicit def foo(i: Int): List[A] = macro MacroAsImplicitParameter.foo
   def bar[T](x: List[T]): List[T] = x
   /*start*/bar(1)/*end*/

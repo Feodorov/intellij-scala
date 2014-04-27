@@ -8,7 +8,7 @@ import org.jetbrains.plugins.scala.lang.psi.api.InferUtil
 import org.jetbrains.plugins.scala.lang.psi.types.Compatibility.Expression
 import org.jetbrains.plugins.scala.lang.psi.ScalaPsiUtil._
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.imports.usages.ImportUsed
-import com.intellij.psi.{PsiNamedElement, PsiElement}
+import com.intellij.psi.{ResolveResult, PsiNamedElement, PsiElement}
 import org.jetbrains.plugins.scala.extensions.toSeqExt
 import org.jetbrains.plugins.scala.lang.psi.impl.ScalaPsiManager
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.{ScObject, ScTrait}
@@ -145,51 +145,18 @@ trait MethodInvocation extends ScExpression with ScalaPsiElement {
   }
 
   private def tryToGetInnerType(ctx: TypingContext, useExpectedType: Boolean): TypeResult[ScType] = {
-    var nonValueType: TypeResult[ScType] = getEffectiveInvokedExpr.getNonValueType(TypingContext.empty)
-
-    checkIfMacro(nonValueType) match { //ScPrefixExpr and ScPostfixExpr can be macro. See testdata/typeInference/macros/Simple6.scala
+    val effExpr = getEffectiveInvokedExpr
+    InferUtil.checkIfMacro(effExpr) match {
       case Some(t) => return t
       case None =>
     }
+
+    var nonValueType: TypeResult[ScType] = effExpr.getNonValueType(TypingContext.empty)
 
     this match {
       case _: ScPrefixExpr => return nonValueType //no arg exprs, just reference expression type
       case _: ScPostfixExpr => return nonValueType //no arg exprs, just reference expression type
       case _ =>
-    }
-
-    def checkIfMacro(nonValueType: TypeResult[ScType]): Option[TypeResult[ScType]] = {
-      def processMacroDefinition(m: ScMacroDefinition): Option[TypeResult[ScType]] = m.containingClass.name match {
-        case "MyIntMacro" | "MyIntMacroInClass" | "MyParamlessMacroInClass" | "MyParamlessIntMacro" => Some(Success(Int, Some(this)))
-        case _ => None
-      }
-      nonValueType match {
-        case Success(func, Some(expr)) =>
-          expr match {
-            case refExpr: ScReferenceExpression =>
-              refExpr.bind() flatMap {
-                _.getElement match {
-                  case m: ScMacroDefinition => processMacroDefinition(m)
-                  case f: ScFunctionDefinition => checkIfMacro(f.returnType) //(some expr).method(/*macro impl here*/)
-                  case o: ScObject => //See testdata/typeInference/macros/Simple3.scala - apply() for function returning object
-                    val m = o.findMethodsByName("apply", checkBases = true)
-                    if (m.size == 1) {
-                      m(0) match {
-                        case fw: ScFunctionWrapper => fw.function match {
-                          case m: ScMacroDefinition => processMacroDefinition(m)
-                          case _ => None
-                        }
-                        case _ => None
-                      }
-                    } else None
-                  case _ => None
-                }
-              }
-            case methodCall: ScMethodCall => checkIfMacro(methodCall.getEffectiveInvokedExpr.getNonValueType(TypingContext.empty)) //See testdata/typeInference/macros/Simple3.scala - apply() for function returning object
-            case _ => None
-          }
-        case _ => None
-      }
     }
 
     val withExpectedType = useExpectedType && expectedType() != None //optimization to avoid except

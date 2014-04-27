@@ -88,11 +88,9 @@ trait ScExpression extends ScBlockStatement with PsiAnnotationMemberValue {
                   if (f.length == 1) {
                     f.head.element match {
                       case m: ScMacroDefinition =>
-                        m.containingClass.name match {
-                          case "Test" =>
-                            val classB = ScalaPsiManager.instance(getProject).getCachedClass(this.getResolveScope, "macroexample.B")
-                            ExpressionTypeResult(Success(ScDesignatorType(classB), Some(this)), f(0).importUsed, Some(f(0).element))
-                          case _ => ExpressionTypeResult(Success(f(0).getTypeWithDependentSubstitutor, Some(this)), f(0).importUsed, Some(f(0).element))
+                        InferUtil.typeAfterImplicitConversion(m) match {
+                          case Some(t) => ExpressionTypeResult(Success(t, Some(this)), f(0).importUsed, Some(f(0).element))
+                          case None => ExpressionTypeResult(Success(f(0).getTypeWithDependentSubstitutor, Some(this)), f(0).importUsed, Some(f(0).element))
                         }
                       case _ => ExpressionTypeResult(Success(f(0).getTypeWithDependentSubstitutor, Some(this)), f(0).importUsed, Some(f(0).element))
                     }
