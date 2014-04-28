@@ -308,10 +308,8 @@ object InferUtil {
   def checkIfMacro(expr: ScExpression): Option[TypeResult[ScType]] = {
     expr match {
       case r: ScReferenceExpression =>
-        val macros: Array[PsiElement] = r.multiResolve(false).map(_.getElement)
-        if (macros.isEmpty) None
-        else macros(0) match {
-          case m: ScMacroDefinition => processMacroDefinition(m)
+        r.bind() match {
+          case Some(ScalaResolveResult(m: ScMacroDefinition, subst)) => processMacroDefinition(m)
           case _ => None
         }
       case _ => None
