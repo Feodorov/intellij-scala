@@ -8,19 +8,23 @@ import org.jetbrains.plugins.scala.lang.psi.types.Compatibility.Expression
 import org.jetbrains.plugins.scala.lang.resolve.ScalaResolveResult
 import org.jetbrains.plugins.scala.lang.psi.implicits.ImplicitParametersCollector
 import statements.params.ScParameter
-import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScMacroDefinition, ScFunction}
+import org.jetbrains.plugins.scala.lang.psi.api.statements._
 import org.jetbrains.plugins.scala.lang.psi.ScalaPsiUtil.SafeCheckException
 import org.jetbrains.plugins.scala.lang.psi.{types, ScalaPsiUtil}
 import org.jetbrains.plugins.scala.lang.psi.types.result.{Success, TypeResult, TypingContext}
 import org.jetbrains.plugins.scala.lang.psi.types._
-import nonvalue.{Parameter, ScMethodType, ScTypePolymorphicType}
 import toplevel.typedef.ScObject
-import com.intellij.psi.{PsiClass, PsiNamedElement, PsiElement}
+import com.intellij.psi.{PsiFileFactory, PsiClass, PsiElement}
 import org.jetbrains.plugins.scala.extensions.toPsiClassExt
 import org.jetbrains.plugins.scala.lang.psi.impl.{ScalaPsiManager, ScalaPsiElementFactory}
 import org.jetbrains.plugins.scala.lang.languageLevel.ScalaLanguageLevel
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement
 import com.intellij.openapi.diagnostic.Logger
+import org.jetbrains.plugins.scala.ScalaFileType
+import org.jetbrains.plugins.scala.lang.psi.types.ScDesignatorType
+import scala.Some
+import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.{ScTypePolymorphicType, Parameter, ScMethodType}
+import org.jetbrains.plugins.scala.lang.psi.impl.statements.ScTypeAliasDefinitionImpl
 
 /**
  * @author Alexander Podkhalyuzin
@@ -155,6 +159,8 @@ object InferUtil {
           case ScalaResolveResult(patt: ScBindingPattern, subst) => {
             exprs += new Expression(polymorphicSubst subst subst.subst(patt.getType(TypingContext.empty).get))
           }
+          case ScalaResolveResult(m: ScFunction, subst) if (m.getName == "apply") && m.hasModifierProperty("implicit") && m.hasAnnotation("scala.reflect.macros.internal.macroImpl").isDefined =>
+            exprs += new Expression(getGenericOfFoo(m))
           case ScalaResolveResult(m: ScMacroDefinition, subst) if m.containingClass.name == "Test" => {
             val classB = ScalaPsiManager.instance(m.getProject).getCachedClass(m.getResolveScope, "macroexample.B")
             exprs += new Expression(polymorphicSubst subst ScDesignatorType(classB))
@@ -304,6 +310,33 @@ object InferUtil {
       case _ => (tp, subst.subst(m.returnType.getOrNothing))
     }
   }
+
+  def getGenericOfFoo(m: PsiElement) = {
+    val textClass ="final class fresh$macro$3 extends trait Generic[shapeless.examples.MyTest.Foo] {}"
+    val textTo = """def to(param$macro$4: shapeless.examples.MyTest.Foo): shapeless.::[Int,shapeless.HNil] = param$macro$4 match {
+                   |		case Foo((pat$macro$1 @ _)) => ::(pat$macro$1, HNil)
+                   |	}""".stripMargin
+    val textFrom = """def from(param$macro$5: shapeless.::[Int,shapeless.HNil]): shapeless.examples.MyTest.Foo = param$macro$5 match {
+                     |	  case ::((pat$macro$2 @ _), HNil) => Foo(pat$macro$2)
+                     |	}""".stripMargin
+    val textType = "type Repr = shapeless.::[Int,shapeless.HNil]"
+    val dummyFile1 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, textClass).asInstanceOf[ScalaFile]
+    val dummyFile2 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, textTo).asInstanceOf[ScalaFile]
+    val dummyFile3 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, textFrom).asInstanceOf[ScalaFile]
+    val dummyFile4 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, textType).asInstanceOf[ScalaFile]
+    val classDef = dummyFile1.typeDefinitions(0)
+    val toDef = dummyFile2.getFirstChild.asInstanceOf[ScFunctionDefinition]
+    val fromDef = dummyFile3.getFirstChild.asInstanceOf[ScFunctionDefinition]
+    val typeDef = dummyFile4.getFirstChild.asInstanceOf[ScTypeAliasDefinitionImpl]
+    classDef.addMember(typeDef, None)
+    classDef.addMember(toDef, None)
+    classDef.addMember(fromDef, None)
+
+    val foo: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "shapeless.examples.MyTest.Foo").filter(!_.isInstanceOf[ScObject])
+    ScParameterizedType(ScType.designator(classDef), Seq(ScType.designator(foo(0))))
+  }
+
+  def processMacroFuncImplicit(m: ScFunction, subst: ScSubstitutor): ScType = getGenericOfFoo(m)
 
   def checkIfMacro(expr: ScExpression): Option[TypeResult[ScType]] = {
     expr match {

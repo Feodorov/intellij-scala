@@ -25,7 +25,7 @@ import api.expr.{ScMethodCall, ScExpression}
 import result.TypingContext
 import lang.resolve.processor.{BaseProcessor, ImplicitProcessor}
 import extensions.toObjectExt
-import api.InferUtil
+import org.jetbrains.plugins.scala.lang.psi.api.{ScalaFile, InferUtil}
 import languageLevel.ScalaLanguageLevel
 import types.Compatibility.Expression
 import com.intellij.openapi.diagnostic.Logger
@@ -228,6 +228,9 @@ class ScImplicitlyConvertible(place: PsiElement, placeType: Boolean => Option[Sc
       val subst = r.substitutor
       val (tp: ScType, retTp: ScType) = r.element match {
         case m: ScMacroDefinition => InferUtil.processMacroImplicit(m, subst)
+        case m: ScFunction if (m.getName == "apply") && m.hasModifierProperty("implicit") && m.hasAnnotation("scala.reflect.macros.internal.macroImpl").isDefined =>
+          val tp = InferUtil.processMacroFuncImplicit(m, subst)
+          (tp, tp)
         case f: ScFunction if f.paramClauses.clauses.length > 0 =>
           val params = f.paramClauses.clauses.apply(0).parameters
           (subst.subst(params.apply(0).getType(TypingContext.empty).getOrNothing),
@@ -389,6 +392,8 @@ class ScImplicitlyConvertible(place: PsiElement, placeType: Boolean => Option[Sc
 
       element match {
         case named: PsiNamedElement if kindMatches(element) => named match {
+          case m: ScFunction if (m.getName == "apply") && m.hasModifierProperty("implicit") && m.hasAnnotation("scala.reflect.macros.internal.macroImpl").isDefined =>
+            addResult(new ScalaResolveResult(m))
           //there is special case for Predef.conforms method
           case f: ScFunction if f.hasModifierProperty("implicit") && !isConformsMethod(f) => {
             if (!ScImplicitlyConvertible.checkFucntionIsEligible(f, place) ||

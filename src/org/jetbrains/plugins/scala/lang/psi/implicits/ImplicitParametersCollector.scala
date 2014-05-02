@@ -16,7 +16,7 @@ import collection.immutable.HashSet
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.{ScObject, ScMember}
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.templates.{ScExtendsBlock, ScTemplateBody}
 import org.jetbrains.plugins.scala.extensions.toPsiClassExt
-import org.jetbrains.plugins.scala.lang.psi.api.InferUtil
+import org.jetbrains.plugins.scala.lang.psi.api.{ScalaFile, InferUtil}
 import org.jetbrains.plugins.scala.lang.psi.ScalaPsiUtil.SafeCheckException
 import annotation.tailrec
 import org.jetbrains.plugins.scala.lang.psi.api.base.types.ScExistentialClause
@@ -98,6 +98,24 @@ class ImplicitParametersCollector(place: PsiElement, tp: ScType, coreElement: Op
             case _ =>
           }
         }
+        case macroFun: ScMacroDefinition =>
+          addResult(new ScalaResolveResult(named))
+        case function: ScFunction if function.getName == "apply" && function.hasAnnotation("scala.reflect.macros.internal.macroImpl").isDefined =>
+          val text = """implicit def product[T <: Product]: Generic[T] = {
+                       |final class fresh$macro$3 extends trait Generic[shapeless.examples.MyTest.Foo] {
+                       |  type Repr = shapeless.::[Int,shapeless.HNil]
+                       |  def to(param$macro$4: shapeless.examples.MyTest.Foo): shapeless.::[Int,shapeless.HNil] = param$macro$4 match {
+                       |		case Foo((pat$macro$1 @ _)) => ::(pat$macro$1, HNil)
+                       |	}
+                       |  def from(param$macro$5: shapeless.::[Int,shapeless.HNil]): shapeless.examples.MyTest.Foo = param$macro$5 match {
+                       |	  case ::((pat$macro$2 @ _), HNil) => Foo(pat$macro$2)
+                       |	}
+                       |}
+                       |new fresh$macro$3()
+                       |}""".stripMargin
+          val dummyFile1 = PsiFileFactory.getInstance(function.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, text).asInstanceOf[ScalaFile]
+          val f = dummyFile1.getFirstChild.asInstanceOf[ScFunction]
+          addResult(new ScalaResolveResult(f))
         case function: ScFunction if function.hasModifierProperty("implicit") => {
           if (isPredefPriority || (ScImplicitlyConvertible.checkFucntionIsEligible(function, place) &&
               ResolveUtils.isAccessible(function, getPlace))) {
@@ -114,6 +132,8 @@ class ImplicitParametersCollector(place: PsiElement, tp: ScType, coreElement: Op
       def forMap(c: ScalaResolveResult, withLocalTypeInference: Boolean, checkFast: Boolean): Option[(ScalaResolveResult, ScSubstitutor)] = {
         val subst = c.substitutor
         c.element match {
+          case function: ScFunction if function.hasAnnotation("scala.reflect.macros.internal.macroImpl").isDefined => Some(c, subst)
+          case macroFun: ScMacroDefinition => Some(c, subst)
           case o: ScObject if !PsiTreeUtil.isContextAncestor(o, place, false) =>
             o.getType(TypingContext.empty) match {
               case Success(objType: ScType, _) =>
