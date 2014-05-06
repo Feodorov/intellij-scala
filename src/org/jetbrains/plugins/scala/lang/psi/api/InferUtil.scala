@@ -13,7 +13,7 @@ import org.jetbrains.plugins.scala.lang.psi.ScalaPsiUtil.SafeCheckException
 import org.jetbrains.plugins.scala.lang.psi.{types, ScalaPsiUtil}
 import org.jetbrains.plugins.scala.lang.psi.types.result.{Success, TypeResult, TypingContext}
 import org.jetbrains.plugins.scala.lang.psi.types._
-import toplevel.typedef.ScObject
+import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.{ScClass, ScObject}
 import com.intellij.psi.{PsiFileFactory, PsiClass, PsiElement}
 import org.jetbrains.plugins.scala.extensions.toPsiClassExt
 import org.jetbrains.plugins.scala.lang.psi.impl.{ScalaPsiManager, ScalaPsiElementFactory}
@@ -312,26 +312,17 @@ object InferUtil {
   }
 
   def getGenericOfFoo(m: PsiElement) = {
-    val textClass ="final class fresh$macro$3 extends trait Generic[shapeless.examples.MyTest.Foo] {}"
-    val textTo = """def to(param$macro$4: shapeless.examples.MyTest.Foo): shapeless.::[Int,shapeless.HNil] = param$macro$4 match {
-                   |		case Foo((pat$macro$1 @ _)) => ::(pat$macro$1, HNil)
-                   |	}""".stripMargin
-    val textFrom = """def from(param$macro$5: shapeless.::[Int,shapeless.HNil]): shapeless.examples.MyTest.Foo = param$macro$5 match {
-                     |	  case ::((pat$macro$2 @ _), HNil) => Foo(pat$macro$2)
-                     |	}""".stripMargin
-    val textType = "type Repr = shapeless.::[Int,shapeless.HNil]"
-    val dummyFile1 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, textClass).asInstanceOf[ScalaFile]
-    val dummyFile2 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, textTo).asInstanceOf[ScalaFile]
-    val dummyFile3 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, textFrom).asInstanceOf[ScalaFile]
-    val dummyFile4 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, textType).asInstanceOf[ScalaFile]
-    val classDef = dummyFile1.typeDefinitions(0)
-    val toDef = dummyFile2.getFirstChild.asInstanceOf[ScFunctionDefinition]
-    val fromDef = dummyFile3.getFirstChild.asInstanceOf[ScFunctionDefinition]
-    val typeDef = dummyFile4.getFirstChild.asInstanceOf[ScTypeAliasDefinitionImpl]
-    classDef.addMember(typeDef, None)
-    classDef.addMember(toDef, None)
-    classDef.addMember(fromDef, None)
-
+    val text = """final class fresh$macro$3 extends Generic[shapeless.examples.MyTest.Foo] {
+                 |  type Repr = shapeless.::[Int,shapeless.HNil]
+                 |  def to(param$macro$4: shapeless.examples.MyTest.Foo): shapeless.::[Int,shapeless.HNil] = param$macro$4 match {
+                 |		case shapeless.examples.MyTest.Foo((pat$macro$1 @ _)) => ::(pat$macro$1, HNil)
+                 |	}
+                 |  def from(param$macro$5: shapeless.::[Int,shapeless.HNil]): shapeless.examples.MyTest.Foo = param$macro$5 match {
+                 |	  case ::((pat$macro$2 @ _), HNil) => shapeless.examples.MyTest.Foo(pat$macro$2)
+                 |	}
+                 |}""".stripMargin
+    val dummyFile1 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, text).asInstanceOf[ScalaFile]
+    val classDef = dummyFile1.getFirstChild.asInstanceOf[ScClass]
     val foo: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "shapeless.examples.MyTest.Foo").filter(!_.isInstanceOf[ScObject])
     ScParameterizedType(ScType.designator(classDef), Seq(ScType.designator(foo(0))))
   }
