@@ -17,7 +17,7 @@ class MyNotifierRunner(notifier: Notifier) { outer =>
       val notifier = outer.notifier
       override def export(implicit arguments: Arguments): ExecutingSpecification => ExecutedSpecification = (spec: ExecutingSpecification) => {
         super.export(arguments)(spec)
-        exportToOthers(arguments)(spec)
+        //exportToOthers(arguments)(spec)
         spec.executed
       }
     }

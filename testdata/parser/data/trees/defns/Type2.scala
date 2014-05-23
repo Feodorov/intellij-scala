@@ -1,0 +1,2 @@
+type F[T] = List[T]
+//Defn.Type(List(), Type.Name(F), List(Aux.TypeParam.Named(List(), Type.Name(T), List(), List(), List(), Aux.TypeBounds(None, None))), Type.Apply(Type.Name(List), List(Type.Name(T))))

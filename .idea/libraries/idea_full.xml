@@ -830,6 +830,7 @@
       <root url="jar://$CARDEA_HOME$/sources.zip!/.jps-build-data/groovyStubs/jps-standalone-builder/java-production" />
       <root url="jar://$CARDEA_HOME$/sources.zip!/internalUtilities/src" />
       <root url="jar://$CARDEA_HOME$/sources.zip!/internalUtilities/test" />
+      <root url="jar://$USER_HOME$/.ideaLibSources/junit-4.11-sources.jar!/" />
     </SOURCES>
     <jarDirectory url="file://$CARDEA_HOME$/lib" recursive="false" />
   </library>

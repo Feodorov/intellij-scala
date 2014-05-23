@@ -1,0 +1,2 @@
+'foo
+//Lit.Symbol(''foo)
