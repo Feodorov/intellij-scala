@@ -1,6 +1,6 @@
 package org.jetbrains.plugins.scala.components
 
-import reflect.BeanProperty
+import beans.BeanProperty
 
 /**
  * Pavel Fatin

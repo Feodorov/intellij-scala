@@ -1,9 +1,11 @@
 <component name="libraryTable">
   <library name="main-scala-library">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/SDK/scalap/scalap.jar!/" />
-      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-library.jar!/" />
-      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-reflect.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scalap/scalap-2.11.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-library-2.11.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-parser-combinators_2.11-1.0.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-xml_2.11-1.0.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-reflect-2.11.0.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

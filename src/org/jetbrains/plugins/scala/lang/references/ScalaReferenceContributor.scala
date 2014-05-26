@@ -12,7 +12,7 @@ import java.util.{ArrayList, Collections}
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.util.{Condition, TextRange}
 import org.jetbrains.annotations.NotNull
-import collection.JavaConversions
+import collection.JavaConversions._
 import com.intellij.psi._
 import impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
 import com.intellij.openapi.diagnostic.Logger
@@ -46,7 +46,7 @@ class FilePathReferenceProvider extends PsiReferenceProvider {
         }
       }
     }
-    for (module <- JavaConversions.asScalaIterable(modules)) {
+    for (module <- modules) {
       moduleRootManager = ModuleRootManager.getInstance(module)
       val sourceRoots: Array[VirtualFile] = moduleRootManager.getSourceRoots
       for (root <- sourceRoots) {

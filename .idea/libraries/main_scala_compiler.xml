@@ -1,14 +1,13 @@
 <component name="libraryTable">
   <library name="main-scala-compiler">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-library.jar!/" />
-      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-compiler.jar!/" />
-      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-reflect.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-compiler-2.11.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-library-2.11.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-parser-combinators_2.11-1.0.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-reflect-2.11.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/SDK/scala/scala-xml_2.11-1.0.1.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES>
-      <root url="file://$USER_HOME$/Downloads/scala-2.10.1-sources/src/library" />
-      <root url="file://$USER_HOME$/Downloads/scala-2.10.1-sources/src/compiler" />
-    </SOURCES>
+    <SOURCES />
   </library>
 </component>
