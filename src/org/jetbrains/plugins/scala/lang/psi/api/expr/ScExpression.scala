@@ -64,9 +64,9 @@ trait ScExpression extends ScBlockStatement with PsiAnnotationMemberValue {
         if (isShape) ExpressionTypeResult(Success(getShape()._1, Some(this)), Set.empty, None)
         else {
           val expected: ScType = expectedOption.getOrElse(expectedType(fromUnderscore).getOrElse(null))
-          if (expr.getText == "Generic[Foo]") {
-            ExpressionTypeResult(Success(InferUtil.getGenericOfFoo(expr), Some(this)), Set.empty, None)
-          } else
+//          if (expr.getText == "Generic[Foo]") {
+//            ExpressionTypeResult(Success(InferUtil.getGenericOfFoo(expr), Some(this)), Set.empty, None)
+//          } else
           if (expected == null) {
             ExpressionTypeResult(getTypeWithoutImplicits(TypingContext.empty, ignoreBaseTypes, fromUnderscore), Set.empty, None)
           } else {

@@ -237,7 +237,7 @@ class ScReferenceExpressionImpl(node: ASTNode) extends ScalaPsiElementImpl(node)
         case _ => false
       }
     }
-
+//Function without params/brackets or with params but without call | GenericCall->MethodInvocation
     val inner: ScType = bind match {
       case Some(ScalaResolveResult(fun: ScFun, s)) =>
         s.subst(fun.polymorphicType)

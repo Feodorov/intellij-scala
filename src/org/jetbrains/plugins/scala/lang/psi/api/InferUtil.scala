@@ -289,6 +289,7 @@ object InferUtil {
     }
   }
 
+  //TODO mpve to macroUtil
   def processMacroDefinition(m: ScMacroDefinition): Option[TypeResult[ScType]] = m.containingClass.name match {
     case "MyIntMacro" | "MyIntMacroInClass" | "MyParamlessMacroInClass" | "MyParamlessIntMacro" => Some(Success(Int, Some(m)))
     case _ => None
@@ -325,6 +326,7 @@ object InferUtil {
     val classDef = dummyFile1.getFirstChild.asInstanceOf[ScClass]
     val foo: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "shapeless.examples.MyTest.Foo").filter(!_.isInstanceOf[ScObject])
     ScParameterizedType(ScType.designator(classDef), Seq(ScType.designator(foo(0))))
+    //ScParameterizedType(ScTypeProjection(ScDesignatorType(Generic), Aux, false), List(T, Repr0))
   }
 
   def processMacroFuncImplicit(m: ScFunction, subst: ScSubstitutor): ScType = getGenericOfFoo(m)
