@@ -42,8 +42,8 @@ object PalladiumTreeConverter {
   private def convertLiteral(element: Option[ScLiteral]): Option[Lit] = element flatMap { e =>
     val value = e.getValue
     e.getFirstChild.getNode.getElementType match {
-      case ScalaTokenTypes.kTRUE => Some(Lit.True())
-      case ScalaTokenTypes.kFALSE => Some(Lit.False())
+      case ScalaTokenTypes.kTRUE => Some(Lit.Bool(true))
+      case ScalaTokenTypes.kFALSE => Some(Lit.Bool(false))
       case ScalaTokenTypes.tINTEGER => value match {
         case v: java.lang.Integer => Some(Lit.Int(v))
         case v: java.lang.Long => Some(Lit.Long(v))
