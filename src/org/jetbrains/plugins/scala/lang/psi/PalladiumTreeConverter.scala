@@ -23,14 +23,18 @@ import scala.reflect.core.Term.ApplyInfix
  * @author kfeodorov
  * @since 23.05.14.
  */
-object PalladiumTreeConverter {
+class PalladiumTreeConverter {
   import MiscUtils._
+  private val tree2psi = scala.collection.mutable.Map[Tree, PsiElement]()
+
+  def get(t: Tree): Option[PsiElement] = tree2psi.get(t)
 
   def convert(element: PsiElement): Option[Tree] = element match {
     //LitSuite
     case e: ScLiteral => convertLiteral(Some(e))
     case _: ScUnitExpr => Some(Lit.Unit())
     //DefnSuite
+    case e: ScParameter => convertParameter(Some(e))
     case e: ScPatternDefinition => convertPatternDefn(Some(e))
     case e: ScVariableDefinition => convertVariableDefn(Some(e))
     case e: ScTypeAliasDefinition => convertTypeAliasDefn(Some(e))
@@ -39,23 +43,31 @@ object PalladiumTreeConverter {
     case _ => None
   }
 
+  private def add2mapAndReturn[T](psiOpt: Option[PsiElement], treeOpt: Option[T]): Option[T] = {
+    treeOpt match {
+      case Some(t: Tree) => psiOpt.foreach(p => tree2psi(t) = p)
+      case _ =>
+    }
+    treeOpt
+  }
+
   private def convertLiteral(element: Option[ScLiteral]): Option[Lit] = element flatMap { e =>
     val value = e.getValue
     e.getFirstChild.getNode.getElementType match {
-      case ScalaTokenTypes.kTRUE => Some(Lit.Bool(true))
-      case ScalaTokenTypes.kFALSE => Some(Lit.Bool(false))
+      case ScalaTokenTypes.kTRUE => add2mapAndReturn(element, Some(Lit.Bool(value = true)))
+      case ScalaTokenTypes.kFALSE => add2mapAndReturn(element, Some(Lit.Bool(value = false)))
       case ScalaTokenTypes.tINTEGER => value match {
-        case v: java.lang.Integer => Some(Lit.Int(v))
-        case v: java.lang.Long => Some(Lit.Long(v))
+        case v: java.lang.Integer => add2mapAndReturn(element, Some(Lit.Int(v)))
+        case v: java.lang.Long => add2mapAndReturn(element, Some(Lit.Long(v)))
       }
       case ScalaTokenTypes.tFLOAT => value match {
-        case v: java.lang.Double => Some(Lit.Double(v))
-        case v: java.lang.Float => Some(Lit.Float(v))
+        case v: java.lang.Double => add2mapAndReturn(element, Some(Lit.Double(v)))
+        case v: java.lang.Float => add2mapAndReturn(element, Some(Lit.Float(v)))
       }
-      case ScalaTokenTypes.tCHAR => Some(Lit.Char(value.asInstanceOf[java.lang.Character]))
-      case ScalaTokenTypes.tMULTILINE_STRING | ScalaTokenTypes.tSTRING | ScalaTokenTypes.tWRONG_STRING=> Some(Lit.String(e.getText))
-      case ScalaTokenTypes.tSYMBOL => Some(Lit.Symbol(scala.Symbol(e.getText)))
-      case ScalaTokenTypes.kNULL => Some(Lit.Null())
+      case ScalaTokenTypes.tCHAR => add2mapAndReturn(element, Some(Lit.Char(value.asInstanceOf[java.lang.Character])))
+      case ScalaTokenTypes.tMULTILINE_STRING | ScalaTokenTypes.tSTRING | ScalaTokenTypes.tWRONG_STRING=> add2mapAndReturn(element, Some(Lit.String(e.getText)))
+      case ScalaTokenTypes.tSYMBOL => add2mapAndReturn(element, Some(Lit.Symbol(scala.Symbol(e.getText))))
+      case ScalaTokenTypes.kNULL => add2mapAndReturn(element, Some(Lit.Null()))
       case _ => None
     }
   }
@@ -78,7 +90,7 @@ object PalladiumTreeConverter {
       case p => SimplePat(p.getText)
     }} match {
       case Some(p) if p.nonEmpty =>
-        Some(Defn.Val(
+        add2mapAndReturn(element, Some(Defn.Val(
           mods = Nil,
           pats = p.map {
             case ParenthesisPat(lhs, rhs) => Pat.Typed(Term.Name(lhs)(isBackquoted = isBackQuoted(lhs)), Type.Name(rhs)(isBackquoted = isBackQuoted(rhs)))
@@ -88,7 +100,7 @@ object PalladiumTreeConverter {
             val tpeStr = tpe.getType(TypingContext.empty).getOrAny.toString
             Type.Name(tpeStr)(isBackQuoted(tpeStr))},
           rhs = convertLiteral(findFirstChildByClass[ScLiteral](e)).getOrElse(null)
-        ))
+        )))
       case _ => None
     }
   }
@@ -96,20 +108,20 @@ object PalladiumTreeConverter {
   private def convertVariableDefn(element: Option[ScVariableDefinition]): Option[Defn] = element flatMap { e =>
     findFirstChildByClass[ScPatternList](e).map{_.patterns.map(_.getText)} match {
       case Some(p) if p.nonEmpty =>
-        Some(Defn.Var(
+        add2mapAndReturn(element, Some(Defn.Var(
           mods = Nil,
           pats = p.map {name => Term.Name(name)(isBackquoted = isBackQuoted(name))}.to[List],
           decltpe = findFirstChildByClass[ScTypeElement](e).map{tpe =>
             val tpeStr = tpe.getType(TypingContext.empty).getOrAny.toString
             Type.Name(tpeStr)(isBackQuoted(tpeStr))},
           rhs = convertLiteral(findFirstChildByClass[ScLiteral](e))
-        ))
+        )))
       case _ => None
     }
   }
 
   private def convertTypeAliasDefn(element: Option[ScTypeAliasDefinition]): Option[Defn] = element flatMap { e =>
-    Some(Defn.Type(
+    add2mapAndReturn(element, Some(Defn.Type(
       mods = Nil,
       name = {
         val typeName = findByIdentifier(e, ScalaTokenTypes.tIDENTIFIER).headOption.map(_.getText).getOrElse("unknown")
@@ -121,18 +133,18 @@ object PalladiumTreeConverter {
               mods = Nil,
               name = Type.Name(typeName)(isBackQuoted(typeName)),
               tparams = Nil,
-              contextBounds = processContextBounds(tparam),
-              viewBounds = processViewBounds(tparam),
-              bounds = processBounds(tparam)
+              contextBounds = processContextBounds(Some(tparam)).get,
+              viewBounds = processViewBounds(Some(tparam)).get,
+              bounds = processBounds(Some(tparam)).get
             )
           }.to[List]
         }.getOrElse(List[TypeParam]()),
-      body = processTypeElement(e.aliasedTypeElement)
-    ))
+      body = processTypeElement(Some(e.aliasedTypeElement)).get
+    )))
   }
 
-  private def convertFunctionDefn(element: Option[ScFunctionDefinition]): Option[Defn] = element map { e =>
-    Defn.Def(
+  private def convertFunctionDefn(element: Option[ScFunctionDefinition]): Option[Defn] = element flatMap { e =>
+    add2mapAndReturn(element, Some(Defn.Def(
       mods = List(),
       name = {
         val funcName = e.name
@@ -144,26 +156,26 @@ object PalladiumTreeConverter {
             mods = Nil,
             name = Type.Name(typeName)(isBackQuoted(typeName)),
             tparams = Nil,
-            contextBounds = processContextBounds(tparam),
-            viewBounds = processViewBounds(tparam),
-            bounds = processBounds(tparam)
+            contextBounds = processContextBounds(Some(tparam)).get,
+            viewBounds = processViewBounds(Some(tparam)).get,
+            bounds = processBounds(Some(tparam)).get
           )
         }.to[List]
       }.getOrElse(List[TypeParam]()),
       explicits = findChildrenByClass[ScParameters](e).flatMap{params => findChildrenByClass[ScParameterClause](params).filter(!_.isImplicit).
-              map{_.parameters.map {processParam}.to[List]}}.to[List],
+              map{_.parameters.flatMap {p => convertParameter(Some(p))}.to[List]}}.to[List],
       implicits = findChildrenByClass[ScParameters](e).flatMap{params => findChildrenByClass[ScParameterClause](params).filter(_.isImplicit).
-              map{_.parameters.map{processParam}.to[List]}}.flatten.to[List],
+              map{_.parameters.flatMap {p => convertParameter(Some(p))}.to[List]}}.flatten.to[List],
       decltpe = None,
       body = e.body.flatMap{b => convert(b)} match {
         case Some(t: Term) => t
         case _ => Lit.Unit()
       }
-    )
+    )))
   }
 
   private def convertExpression(element: Option[ScExpression]): Option[Term] = element flatMap {
-    case e: ScInfixExpr => Some(ApplyInfix (
+    case e: ScInfixExpr => add2mapAndReturn(element, Some(ApplyInfix (
         lhs = Term.Name(e.lOp.getNode.getText)(isBackquoted = isBackQuoted(e.lOp.getNode.getText)),
         op = {
           val opName = e.operation.getElement.getText
@@ -171,42 +183,55 @@ object PalladiumTreeConverter {
         },
         targs = Nil,
         args = List(Term.Name(e.rOp.getNode.getText)(isBackquoted = isBackQuoted(e.rOp.getNode.getText))) //TODO
-      ))
+      )))
     case _ => None
   }
 
-  private def processTypeElement(e: ScTypeElement) = e match {
-    case p: ScParameterizedTypeElement => Type.Apply(
+  private def convertParameter(element: Option[ScParameter]): Option[Param.Named] = element flatMap { param =>
+      add2mapAndReturn(element,
+        Some(Param.Named(
+          mods = Nil,
+          name = Term.Name(param.getName)(isBackquoted = isBackQuoted(param.getName)),
+          decltpe = param.paramType.map{_.typeElement}.flatMap {p => processTypeElement(Some(p))},
+          default = None //TODO
+        )))
+  }
+
+  private def processTypeElement(element: Option[ScTypeElement]): Option[Type] = element flatMap {
+    case p: ScParameterizedTypeElement => add2mapAndReturn(element,
+      Some(Type.Apply(
       tpe = Type.Name(p.typeElement.getText)(isBackquoted = isBackQuoted(p.getText)),
       args = p.typeArgList match {
         case a: ScTypeArgs => a.typeArgs.map(e => Type.Name(e.getText)(isBackquoted = isBackQuoted(e.getText))).to[List]
         case _ => List[Type]()
       }
-    )
-    case p => Type.Name(p.getText)(isBackquoted = isBackQuoted(p.getText))
+    )))
+    case p => add2mapAndReturn(element,
+      Some(Type.Name(p.getText)(isBackquoted = isBackQuoted(p.getText))))
   }
 
-  private def processBounds(tparam: ScTypeParam) = TypeBounds(
-    Option(findByIdentifier(tparam, ScalaTokenTypes.tLOWER_BOUND)).flatMap{ ids => if (ids.isEmpty) None else findFirstChildByClass[ScTypeElement](tparam).map(processTypeElement)},
-    Option(findByIdentifier(tparam, ScalaTokenTypes.tUPPER_BOUND)).flatMap{ ids => if (ids.isEmpty) None else findLastChildByClass[ScTypeElement](tparam).map(processTypeElement)}
-  )
+  private def processBounds(element: Option[ScTypeParam]): Option[TypeBounds] = element flatMap { tparam =>
+    add2mapAndReturn(element, Some(TypeBounds(
+      Option(findByIdentifier(tparam, ScalaTokenTypes.tLOWER_BOUND)).flatMap{ ids => if (ids.isEmpty) None else findFirstChildByClass[ScTypeElement](tparam).flatMap {p => processTypeElement(Some(p))}},
+      Option(findByIdentifier(tparam, ScalaTokenTypes.tUPPER_BOUND)).flatMap{ ids => if (ids.isEmpty) None else findLastChildByClass[ScTypeElement](tparam).flatMap {p => processTypeElement(Some(p))}}
+    )))
+  }
 
-  private def processParam(param: ScParameter) = Param.Named(
-    mods = Nil,
-    name = Term.Name(param.getName)(isBackquoted = isBackQuoted(param.getName)),
-    decltpe = param.paramType.map{_.typeElement}.map{processTypeElement},
-    default = None //TODO
-  )
+  private def processViewBounds(element: Option[ScTypeParam]): Option[Seq[Type]] = element flatMap { tparam =>
+    add2mapAndReturn(element, Some(if (findByIdentifier(tparam, ScalaTokenTypes.tVIEW).nonEmpty)
+      findChildrenByClass[ScTypeElement](tparam).flatMap { p => processTypeElement(Some(p))}.to[List]
+    else scala.collection.immutable.Seq[Type]()))
+  }
 
-  private def processViewBounds(tparam: ScTypeParam): Seq[Type] =
-    if (findByIdentifier(tparam, ScalaTokenTypes.tVIEW).nonEmpty)
-      findChildrenByClass[ScTypeElement](tparam).map(processTypeElement).to[List]
-    else scala.collection.immutable.Seq[Type]()
+  private def processContextBounds(element: Option[ScTypeParam]): Option[Seq[Type]] = element flatMap { tparam =>
+    add2mapAndReturn(element, Some(if (findByIdentifier(tparam, ScalaTokenTypes.tCOLON).nonEmpty)
+      findChildrenByClass[ScTypeElement](tparam).flatMap { p => processTypeElement(Some(p))}.to[List]
+    else scala.collection.immutable.Seq[Type]()))
+  }
+}
 
-  private def processContextBounds(tparam: ScTypeParam): Seq[Type] =
-    if (findByIdentifier(tparam, ScalaTokenTypes.tCOLON).nonEmpty)
-      findChildrenByClass[ScTypeElement](tparam).map(processTypeElement).to[List]
-    else scala.collection.immutable.Seq[Type]()
+object PalladiumTreeConverter {
+  def apply() = new PalladiumTreeConverter
 }
 
 private object MiscUtils {

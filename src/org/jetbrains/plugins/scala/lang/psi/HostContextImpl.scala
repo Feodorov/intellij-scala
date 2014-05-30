@@ -8,16 +8,15 @@ import scala.reflect.core.Member.Template
 import scala.reflect.core.Type.Ref
 import scala.reflect.core.Aux.Self
 import scala.reflect.semantic.SemanticProfile
-import com.intellij.psi.util.PsiTreeUtil
+import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScTemplateDefinition
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunctionDefinition
-import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScClass
-import com.intellij.psi.PsiElement
 
 /**
  * @author kfeodorov
  * @since 28.05.14.
  */
-class HostContextImpl(root: PsiElement) extends HostContext {
+class HostContextImpl(c: PalladiumTreeConverter) extends HostContext {
+
   override def syntaxProfile: SyntaxProfile = ???
 
   override def supertypes(tpe: Type): Seq[Type] = ???
@@ -36,17 +35,18 @@ class HostContextImpl(root: PsiElement) extends HostContext {
 
   override def widen(tpe: Type): Type = ???
 
-  override def members(scope: Scope): Seq[Member] = scope match {
-    case f: Defn.Def => PsiTreeUtil.findChildOfType(root, classOf[ScClass]) match {
-      case e: ScalaPsiElement => e.functions.to[List].map(PalladiumTreeConverter.convert).map(_.get.asInstanceOf[Member])
-      case _ => Seq()
+  override def members(scope: Scope): Seq[Member] =
+    c.get(scope) match {
+      case Some(t: ScTemplateDefinition) =>
+        t.members.flatMap{c.convert}.map(_.asInstanceOf[Member]).toList ++ t.functions.flatMap(c.convert).map(_.asInstanceOf[Member]).toList //TODO val/var/type/inner classes
+      case Some(t: ScFunctionDefinition) =>
+        t.parameters.flatMap{c.convert}.map(_.asInstanceOf[Member]).toList
+      case _ => Nil
     }
-    case _ => Seq()
-  }
 
   override def members(scope: Scope, name: Name): Seq[Member] = ???
 
-  override def lub(tpes: Seq[Type]): Type = ??? //PsiTreeUtil.findCommonParent
+  override def lub(tpes: Seq[Type]): Type = ???
 
   override def semanticProfile: SemanticProfile = ???
 
@@ -65,4 +65,8 @@ class HostContextImpl(root: PsiElement) extends HostContext {
   override def subclasses(tpe: Type): Seq[Template] = ???
 
   override def dealias(tpe: Type): Type = ???
+}
+
+object HostContext {
+  def apply(p: PalladiumTreeConverter) = new HostContextImpl(p)
 }

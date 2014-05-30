@@ -30,7 +30,7 @@ abstract class TreeTestBase extends ScalaLightPlatformCodeInsightTestCaseAdapter
     configureFromFileTextAdapter(ioFile.getName, fileText)
     val scalaFile: ScalaFile = getFileAdapter.asInstanceOf[ScalaFile]
 
-    convert(scalaFile.getFirstChild) match {
+    PalladiumTreeConverter().convert(scalaFile.getFirstChild) match {
       case Some(res) =>
         val lastPsi = scalaFile.findElementAt(scalaFile.getText.length - 1)
         val text = lastPsi.getText
