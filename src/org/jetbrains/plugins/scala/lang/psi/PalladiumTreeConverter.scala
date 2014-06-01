@@ -18,6 +18,7 @@ import scala.collection.immutable.Seq
 import com.intellij.lang.ASTNode
 import scala.Some
 import scala.reflect.core.Term.ApplyInfix
+import org.jetbrains.plugins.scala.lang.psi.types.ScType
 
 /**
  * @author kfeodorov
@@ -28,6 +29,8 @@ class PalladiumTreeConverter {
   private val tree2psi = scala.collection.mutable.Map[Tree, PsiElement]()
 
   def get(t: Tree): Option[PsiElement] = tree2psi.get(t)
+
+  def convertType(t: ScType): Option[Type] = None
 
   def convert(element: PsiElement): Option[Tree] = element match {
     //LitSuite
