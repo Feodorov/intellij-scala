@@ -229,7 +229,7 @@ class ScImplicitlyConvertible(place: PsiElement, placeType: Boolean => Option[Sc
       val (tp: ScType, retTp: ScType) = r.element match {
         case m: ScMacroDefinition => InferUtil.processMacroImplicit(m, subst)
         case m: ScFunction if (m.getName == "apply") && m.hasModifierProperty("implicit") && m.hasAnnotation("scala.reflect.macros.internal.macroImpl").isDefined =>
-          val tp = InferUtil.processMacroFuncImplicit(m, subst)
+          val tp = InferUtil.processMacroFuncImplicit(m)
           (tp, tp)
         case f: ScFunction if f.paramClauses.clauses.length > 0 =>
           val params = f.paramClauses.clauses.apply(0).parameters

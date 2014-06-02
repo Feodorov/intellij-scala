@@ -20,7 +20,7 @@ import org.jetbrains.plugins.scala.lang.psi.api.expr._
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScTypedDefinition
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import org.jetbrains.plugins.scala.lang.psi.api.{ScalaRecursiveElementVisitor, ScalaElementVisitor}
+import org.jetbrains.plugins.scala.lang.psi.api.{InferUtil, ScalaRecursiveElementVisitor, ScalaElementVisitor}
 import api.toplevel.imports.ScImportStmt
 import api.base.patterns.ScReferencePattern
 import com.intellij.util.IncorrectOperationException
@@ -29,7 +29,7 @@ import api.toplevel.typedef._
 import completion.lookups.LookupElementManager
 import extensions.{toPsiMemberExt, toPsiNamedElementExt, toPsiClassExt}
 import org.jetbrains.plugins.scala.lang.psi.api.base.types.{ScSimpleTypeElement, ScSelfTypeElement}
-import org.jetbrains.plugins.scala.lang.psi.api.base.ScPrimaryConstructor
+import org.jetbrains.plugins.scala.lang.psi.api.base.{ScStableCodeReferenceElement, ScPrimaryConstructor}
 import org.jetbrains.plugins.scala.lang.psi.types.Conformance.AliasType
 import org.jetbrains.plugins.scala.lang.refactoring.util.ScTypeUtil
 
@@ -301,6 +301,10 @@ class ScReferenceExpressionImpl(node: ASTNode) extends ScalaPsiElementImpl(node)
           }
         }
         s.subst(fun.polymorphicType(optionResult))
+      case Some(result @ ScalaResolveResult(fun: ScFunction, s)) if (fun.getName == "apply") &&
+              fun.hasAnnotation("scala.reflect.macros.internal.macroImpl").isDefined &&
+              fun.getParent.getParent.getParent.getText.contains("Generic") =>
+        InferUtil.processMacroFuncImplicit(fun)
       case Some(result @ ScalaResolveResult(fun: ScFunction, s)) =>
         val functionType = s.subst(fun.polymorphicType())
         if (result.isDynamic) ResolvableReferenceExpression.getDynamicReturn(functionType)

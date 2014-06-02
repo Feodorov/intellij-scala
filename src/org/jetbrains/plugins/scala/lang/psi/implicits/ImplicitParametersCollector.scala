@@ -102,13 +102,13 @@ class ImplicitParametersCollector(place: PsiElement, tp: ScType, coreElement: Op
           addResult(new ScalaResolveResult(named))
         case function: ScFunction if function.getName == "apply" && function.hasAnnotation("scala.reflect.macros.internal.macroImpl").isDefined =>
           val text = """implicit def product[T <: Product]: Generic[T] = {
-                       |final class fresh$macro$3 extends Generic[shapeless.examples.MyTest.Foo] {
+                       |final class fresh$macro$3 extends Generic[shapeless.examples.Foo] {
                        |  type Repr = shapeless.::[Int,shapeless.HNil]
-                       |  def to(param$macro$4: shapeless.examples.MyTest.Foo): shapeless.::[Int,shapeless.HNil] = param$macro$4 match {
-                       |		case shapeless.examples.MyTest.Foo((pat$macro$1 @ _)) => ::(pat$macro$1, HNil)
+                       |  def to(param$macro$4: shapeless.examples.Foo): shapeless.::[Int,shapeless.HNil] = param$macro$4 match {
+                       |		case shapeless.examples.Foo((pat$macro$1 @ _)) => ::(pat$macro$1, HNil)
                        |	}
-                       |  def from(param$macro$5: shapeless.::[Int,shapeless.HNil]): shapeless.examples.MyTest.Foo = param$macro$5 match {
-                       |	  case ::((pat$macro$2 @ _), HNil) => shapeless.examples.MyTest.Foo(pat$macro$2)
+                       |  def from(param$macro$5: shapeless.::[Int,shapeless.HNil]): shapeless.examples.Foo = param$macro$5 match {
+                       |	  case ::((pat$macro$2 @ _), HNil) => shapeless.examples.Foo(pat$macro$2)
                        |	}
                        |}
                        |new fresh$macro$3()

@@ -37,6 +37,7 @@
     <orderEntry type="library" name="community-plugins" level="project" />
     <orderEntry type="library" name="nailgun" level="project" />
     <orderEntry type="module" module-name="ScalaRunner" />
+    <orderEntry type="library" name="com.chuusai:shapeless_2.11:2.0.0" level="project" />
   </component>
 </module>
 

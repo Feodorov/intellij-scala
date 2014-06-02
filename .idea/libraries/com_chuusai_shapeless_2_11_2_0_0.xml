@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="com.chuusai:shapeless_2.11:2.0.0" type="repository">
+    <properties maven-id="com.chuusai:shapeless_2.11:2.0.0" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/chuusai/shapeless_2.11/2.0.0/shapeless_2.11-2.0.0.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/scala-lang/scala-library/2.11.0/scala-library-2.11.0.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/scala-lang/scala-reflect/2.11.0/scala-reflect-2.11.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Palladium">
+    <CLASSES>
+      <root url="file://$MAVEN_REPOSITORY$/org/scalareflect/core_2.11/0.1.0-SNAPSHOT" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/scalareflect/core-foundation_2.11/0.1.0-SNAPSHOT/core-foundation_2.11-0.1.0-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+    <jarDirectory url="file://$MAVEN_REPOSITORY$/org/scalareflect/core_2.11/0.1.0-SNAPSHOT" recursive="false" />
+  </library>
+</component>

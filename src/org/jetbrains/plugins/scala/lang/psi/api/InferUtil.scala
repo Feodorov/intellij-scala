@@ -22,9 +22,12 @@ import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement
 import com.intellij.openapi.diagnostic.Logger
 import org.jetbrains.plugins.scala.ScalaFileType
 import org.jetbrains.plugins.scala.lang.psi.types.ScDesignatorType
+import org.jetbrains.plugins.scala.lang.psi.api.base.types.ScTypeProjection
 import scala.Some
-import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.{ScTypePolymorphicType, Parameter, ScMethodType}
+import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.{TypeParameter, ScTypePolymorphicType, Parameter, ScMethodType}
 import org.jetbrains.plugins.scala.lang.psi.impl.statements.ScTypeAliasDefinitionImpl
+import shapeless.Generic
+import org.jetbrains.plugins.scala.lang.psi.impl.statements.params.ScTypeParamImpl
 
 /**
  * @author Alexander Podkhalyuzin
@@ -313,23 +316,33 @@ object InferUtil {
   }
 
   def getGenericOfFoo(m: PsiElement) = {
-    val text = """final class fresh$macro$3 extends Generic[shapeless.examples.MyTest.Foo] {
+    val text = """final class fresh$macro$3 extends shapeless.Generic[shapeless.examples.Foo] {
                  |  type Repr = shapeless.::[Int,shapeless.HNil]
-                 |  def to(param$macro$4: shapeless.examples.MyTest.Foo): shapeless.::[Int,shapeless.HNil] = param$macro$4 match {
-                 |		case shapeless.examples.MyTest.Foo((pat$macro$1 @ _)) => ::(pat$macro$1, HNil)
+                 |  def to(param$macro$4: shapeless.examples.Foo): shapeless.::[Int,shapeless.HNil] = param$macro$4 match {
+                 |		case shapeless.examples.Foo((pat$macro$1 @ _)) => ::(pat$macro$1, HNil)
                  |	}
-                 |  def from(param$macro$5: shapeless.::[Int,shapeless.HNil]): shapeless.examples.MyTest.Foo = param$macro$5 match {
-                 |	  case ::((pat$macro$2 @ _), HNil) => shapeless.examples.MyTest.Foo(pat$macro$2)
+                 |  def from(param$macro$5: shapeless.::[Int,shapeless.HNil]): shapeless.examples.Foo = param$macro$5 match {
+                 |	  case ::((pat$macro$2 @ _), HNil) => shapeless.examples.Foo(pat$macro$2)
                  |	}
                  |}""".stripMargin
     val dummyFile1 = PsiFileFactory.getInstance(m.getManager.getProject).createFileFromText("dummy." + ScalaFileType.SCALA_FILE_TYPE.getDefaultExtension, ScalaFileType.SCALA_FILE_TYPE, text).asInstanceOf[ScalaFile]
     val classDef = dummyFile1.getFirstChild.asInstanceOf[ScClass]
-    val foo: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "shapeless.examples.MyTest.Foo").filter(!_.isInstanceOf[ScObject])
-    ScParameterizedType(ScType.designator(classDef), Seq(ScType.designator(foo(0))))
-    //ScParameterizedType(ScTypeProjection(ScDesignatorType(Generic), Aux, false), List(T, Repr0))
+    val foo: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "shapeless.examples.Foo").filter(!_.isInstanceOf[ScObject])
+    val hlist: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "shapeless.HList")
+    val hlistSemi: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "shapeless.::")
+    val hnil: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "shapeless.HNil")
+    val gen: Array[PsiClass] = ScalaPsiManager.instance(m.getProject).getCachedClasses(m.getResolveScope, "shapeless.Generic")
+    val genObj = gen.filter(_.isInstanceOf[ScObject])(0)
+    val typeAlias = genObj.getLastChild.getLastChild.getChildren.filter(_.isInstanceOf[ScTypeAliasDefinition])(0).asInstanceOf[ScTypeAliasDefinition]
+
+    val hlistType = ScParameterizedType(ScType.designator(hlistSemi(0)), Seq(Int, ScType.designator(hnil(0))))
+    val res = ScParameterizedType(ScProjectionType(ScType.designator(gen(0)), typeAlias, false), Seq(ScType.designator(foo(0)), hlistType))
+//    val res = ScParameterizedType(ScType.designator(typeAlias), Seq(ScType.designator(foo(0)), hlistType))
+    println(res)
+    res
   }
 
-  def processMacroFuncImplicit(m: ScFunction, subst: ScSubstitutor): ScType = getGenericOfFoo(m)
+  def processMacroFuncImplicit(m: ScFunction): ScType = getGenericOfFoo(m)
 
   def checkIfMacro(expr: ScExpression): Option[TypeResult[ScType]] = {
     expr match {
